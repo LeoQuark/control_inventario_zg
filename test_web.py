@@ -4,7 +4,7 @@ import datetime
 import uuid as uid
 
 from helpers.read_code import read_barcode
-from helpers.read_inventory import read_excel_inventory, search_cell_row, update_product
+from helpers.read_inventory import read_excel_inventory, search_cell_row, input_update_product,output_update_product, get_total_product, update_specific_cell
 
 file_path = "./data"
 
@@ -33,16 +33,19 @@ def listen_barcode(barcode):
 
     print("El código de barras escaneado es:", barcode)
     woorkbook = read_excel_inventory(file_path)
-    sheet = woorkbook["INGRESO"]
-
-    cell_row =  search_cell_row(sheet, barcode)
+    
+    cell_row =  search_cell_row(woorkbook, barcode, "ENTRADAS")
             
     if cell_row is False:
         print("product not exists")
         return False
     
     
-    update_product(woorkbook, cell_row)
+    #input_update_product(woorkbook, cell_row)
+    total_product = get_total_product(woorkbook, "ENTRADAS", "CODIGO")
+    update_specific_cell
+
+    update_specific_cell(woorkbook, "ENTRADAS", "TOTAL PRODUCTO", total_product)
 
 
     woorkbook.save(f"{file_path}/inventory.xlsx")
