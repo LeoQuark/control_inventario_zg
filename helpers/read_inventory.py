@@ -1,40 +1,42 @@
 import pandas as pd
 import openpyxl as xlsx
+from datetime import datetime
+
+rows = "ABCDE"
 
 columns = {
     "CODIGO": "A",
     "PRODUCTO": "B",
-    "CATEGORIA":"C",
-    "CANTIDAD":"D",
-    "FECHA":"E",
-    "TOTAL PRODUCTO":"H1",
-    "TOTAL ENTRADAS":"H2"
+    "CATEGORIA": "C",
+    "CANTIDAD": "D",
+    "FECHA": "E",
+    "TOTAL PRODUCTO": "H1",
+    "TOTAL ENTRADAS": "H2",
 }
 
-def read_excel_inventory(file_path = "./data") -> xlsx:
+
+def read_excel_inventory(file_path="./data") -> xlsx:
     """
     se carga el excel de inventario
-
-    input: 
+    input:
         file_path (str, no requerido) -> ruta donde se encuentra el excel de inventario
     output
         woorkbook (xlsx openpyxl) -> woorkbook del inventario (excel)
-    
     """
     woorkbook = xlsx.load_workbook(f"{file_path}/inventory.xlsx")
     return woorkbook
 
+
 def search_cell_row(woorkbook, barcode, sheet_name) -> int | bool:
     """
     se buscar si existe el codigo de producto en la hoja de ingresada en la primera columna (A)
-    
     input:
         woorkbook (xlsx openpyxl) -> woorkbook del inventario (excel)
         barcode (str) -> codigo de barra
         sheet_name (str) -> nombre de la hoja del excel a buscar
     output:
         cell.row (int) -> numero de la celda en donde se encuentra el codigo
-        or 
+        or
         (bool) -> en caso de que no encuentre el codigo en el inventario o error al encontrar la columna
     """
     try:
@@ -42,9 +44,9 @@ def search_cell_row(woorkbook, barcode, sheet_name) -> int | bool:
 
         # recorro la columna A (codigo) buscando el barcode detectado
         for cell in sheet["A"]:
-            if cell.row < 3: 
+            if cell.row < 3:
                 continue
-            if cell.value is None: 
+            if cell.value is None:
                 return False
 
             if cell.value == barcode:
@@ -58,7 +60,6 @@ def search_cell_row(woorkbook, barcode, sheet_name) -> int | bool:
 def input_update_product(woorkbook, cell_row, amount=False) -> bool:
     """
     se actualiza la cantidad del producto, se suma 1 en caso de no agregar la cantidad (entrada)
-
     input:
         woorkbook (xlsx openpyxl) -> woorkbook del inventario (excel)
         cell_row (int) -> numero de la celda en donde se encuentra el producto
@@ -79,7 +80,7 @@ def input_update_product(woorkbook, cell_row, amount=False) -> bool:
     except:
         print("error")
         return False
-    
+
 
 def get_total_product(woorkbook, sheet_name, columns_name) -> int:
     print("sasa")
@@ -88,12 +89,12 @@ def get_total_product(woorkbook, sheet_name, columns_name) -> int:
         # recorro la columna A (codigo) buscando el barcode detectado
         list_code = []
         for cell in sheet[columns[columns_name]]:
-            if cell.row < 4: 
+            if cell.row < 4:
                 continue
-            if cell.value is None: 
+            if cell.value is None:
                 break
             list_code.append(cell.value)
-        
+
         df_product = pd.DataFrame(data={"codigos": list_code})
         unique_product = df_product["codigos"].unique()
 
@@ -103,11 +104,86 @@ def get_total_product(woorkbook, sheet_name, columns_name) -> int:
         print("error")
         return False
 
+
 def update_specific_cell(woorkbook, sheet_name, columns_name, value) -> bool:
     try:
         sheet = woorkbook[sheet_name]
         sheet[columns[columns_name]].value = value
         return True
+
+    except:
+        print("error")
+        return False
+
+
+# usado
+def get_all_products(woorkbook) -> dict[any, any] | bool:
+    try:
+        sheet = woorkbook["ENTRADAS"]
+        list_code = []
+        for cell in sheet["A"]:
+            if cell.row < 4:
+                continue
+            if cell.value is None:
+                break
+            list_code.append(cell.value)
+
+        df_product = pd.DataFrame(data={"codigos": list_code})
+        unique_product = df_product["codigos"].unique()
+
+        dicc_products = []
+        for cell in sheet["A"]:
+            if cell.row < 4:
+                continue
+            if cell.value is None:
+                break
+            if cell.value in unique_product:
+                dicc_products.append(
+                    {
+                        "code": cell.value,
+                        "name": sheet[f"B{cell.row}"].value,
+                        "category": sheet[f"C{cell.row}"].value,
+                    }
+                )
+
+        return dicc_products
+
+    except Exception as error:
+        print(f"Error \n{error}")
+        return False
+
+
+def verify_product(dicc_products, barcode) -> dict[any, any] | bool:
+    for product in dicc_products:
+        if barcode in product["code"]:
+            print("encontrado ------------------------\n", product)
+            return product
+
+    return False
+
+
+def add_product(woorkbook, sheet_name, columns_name, barcode, amount=1) -> bool:
+    try:
+        sheet = woorkbook[sheet_name]
+
+        for cell in sheet[columns[columns_name]]:
+            if cell.row < 4:
+                continue
+            if cell.value is None:
+                date_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                dicc_products = get_all_products(woorkbook)
+                product = verify_product(dicc_products, barcode)
+
+                if product is False:
+                    return False
+
+                sheet[f"A{cell.row}"].value = product["code"]
+                sheet[f"B{cell.row}"].value = product["name"]
+                sheet[f"C{cell.row}"].value = product["category"]
+                sheet[f"D{cell.row}"].value = amount
+                sheet[f"E{cell.row}"].value = date_now
+
+                return True
 
     except:
         print("error")
