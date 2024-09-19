@@ -3,14 +3,24 @@ import sys
 
 from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
-from styles import frame_menu, btn_ingreso, title_menu
+from PyQt6.QtWidgets import (
+    QFormLayout,
+    QWidget,
+    QLineEdit,
+    QGridLayout,
+    QHBoxLayout,
+    QPushButton,
+    QLabel,
+)
+from styles import frame_menu, btn_ingreso, title_menu, input_product
 
 from codigo import ReadBarcode
 
 
 class BarcodeReaderWorker(QObject):
     # Definir una señal para enviar datos al hilo principal
-    barcode_read = pyqtSignal(str)
+    # barcode_signal = pyqtSignal(str)
+    product_signal = pyqtSignal(dict)
 
     def __init__(self):
         super().__init__()
@@ -19,12 +29,21 @@ class BarcodeReaderWorker(QObject):
 
     def run(self):
         print("method run")
-        barcode = self.read.read()
+        self.read.read()
         product = self.read.search_code()
-        print(f"product {product}")
-        if barcode:
-            print("Lectura completa")
-            self.barcode_read.emit(barcode)
+        print(f"product {product} ", type(product))
+
+        if product is False:
+            print("hay que hacer algo aqui")
+            # self.barcode_read.emit(barcode_read)
+
+            self.product_signal.emit({})
+
+        else:
+            print("producot encontrado")
+
+            # self.barcode_read.emit(barcode_read)
+            self.product_signal.emit(product)
 
 
 class Ui_MainWindow(object):
@@ -41,7 +60,7 @@ class Ui_MainWindow(object):
         self.centralwidget.setObjectName("centralwidget")
 
         # Crear el QGridLayout principal
-        self.grid_layout = QtWidgets.QGridLayout(self.centralwidget)
+        self.grid_layout = QGridLayout(self.centralwidget)
         self.grid_layout.setContentsMargins(10, 10, 10, 10)  # Márgenes opcionales
         self.grid_layout.setSpacing(10)  # Espaciado entre widgets
 
@@ -78,7 +97,7 @@ class Ui_MainWindow(object):
         # Añadir el menú al QGridLayout en la primera columna (1/3 del ancho)
         self.grid_layout.addWidget(
             self.menu_frame, 0, 0, 2, 1
-        )  # Ocupa 2 filas1 columna
+        )  # Ocupa 2 filas 1 columna
 
         # Crear el cuerpo principal (2/3 del ancho)
         self.body_frame = QtWidgets.QFrame(self.centralwidget)
@@ -93,14 +112,16 @@ class Ui_MainWindow(object):
         self.title_label.setStyleSheet("font-size: 18px; font-weight: bold;")
 
         # Formulario del cuerpo
-        self.form_layout = QtWidgets.QFormLayout()
+        # self.form_layout = QtWidgets.QFormLayout()
+        self.form_widget = QWidget()
         # self.product_name = QtWidgets.QLineEdit()
         # self.product_code = QtWidgets.QLineEdit()
         # self.form_layout.addRow("Nombre Producto:", self.product_name)
         # self.form_layout.addRow("Código:", self.product_code)
 
         self.body_layout.addWidget(self.title_label)
-        self.body_layout.addLayout(self.form_layout)
+        # self.body_layout.addLayout(self.form_widget)
+        # self.form_widget.setLayout(QVBoxLayout())
 
         # Añadir el cuerpo principal al QGridLayout en las dos últimas columnas (2/3 del ancho)
         self.grid_layout.addWidget(
@@ -111,17 +132,17 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
 
     def generate_body_add_product(self):
-        self.title_body = "Ingreso de Productos"
-        self.title_label.setText(self.title_body)
+        # self.title_body = "Ingreso de Productos"
+        # self.title_label.setText(self.title_body)
 
-        # self.form_layout = QtWidgets.QFormLayout()
-        # self.product_name = QtWidgets.QLineEdit()
-        # self.product_code = QtWidgets.QLineEdit()
-        # self.form_layout.addRow("Nombre Producto:", self.product_name)
-        # self.form_layout.addRow("Código:", self.product_code)
+        self.form_layout = QtWidgets.QFormLayout()
+        self.product_name = QtWidgets.QLineEdit()
+        self.product_code = QtWidgets.QLineEdit()
+        self.form_layout.addRow("Nombre Producto:", self.product_name)
+        self.form_layout.addRow("Código:", self.product_code)
 
-        # self.body_layout.addWidget(self.title_label)
-        # self.body_layout.addLayout(self.form_layout)
+        self.body_layout.addWidget(self.title_label)
+        self.body_layout.addLayout(self.form_layout)
 
     def add_product(self):
         try:
@@ -131,32 +152,82 @@ class Ui_MainWindow(object):
                 and self.thread.isRunning()
             ):
                 return  # Evitar iniciar múltiples hilos simultáneamente
+
             print("ingreso productos")
             # Crear el hilo y el worker
             self.thread = QThread()
             self.worker = BarcodeReaderWorker()
-
             # Mover el worker al hilo
             self.worker.moveToThread(self.thread)
-            self.worker.barcode_read.connect(self.update_data_product)
-
+            # self.worker.barcode_read.connect(self.update_data_product)
+            self.worker.product_signal.connect(self.update_data_product)
             # Conectar las señales
             self.thread.started.connect(self.worker.run)
-
             # Iniciar el hilo
             self.thread.start()
+
         except Exception as error:
             print(f"Error \n {error}")
 
-    def update_data_product(self, barcode):
+    def update_data_product(self, product):
         """Actualiza la interfaz con el progreso recibido del hilo."""
-        # self.label.setText(f"Progreso: {value}")
-        self.title_body = f"Ingreso de Productos {barcode}"
-        self.title_label.setText(self.title_body)
+        print(f"productooo: {product}")
+        if not product:
+            self.title_body = f"Producto Nuevo"
+            self.title_label.setText(self.title_body)
+            # self.product_name = QtWidgets.QLineEdit()
+            # self.product_code = QtWidgets.QLineEdit()
+            # self.form_layout.addRow("Nombre Producto:")
+            # self.form_layout.addRow("Código:")
+
+            self.show_form_product()
+
+        if product:
+            self.title_body = f"Ingreso de Productos"
+            self.title_label.setText(self.title_body)
 
         # # Detener el hilo cuando termine el trabajo
         self.thread.quit()
         self.thread.wait()
+
+    def show_form_product(self):
+        """Genera y muestra un formulario de ingreso de datos"""
+        form_layout = QFormLayout()
+
+        # Crear campos de formulario
+        self.name_product_input = QLineEdit()
+        self.category_input = QLineEdit()
+        self.amount_input = QLineEdit()
+
+        # Aplicar estilos CSS a los QLineEdit
+        style_input = input_product()
+        self.name_product_input.setStyleSheet(style_input)
+        self.category_input.setStyleSheet(style_input)
+        self.amount_input.setStyleSheet(style_input)
+
+        form_layout.addRow("Producto:", self.name_product_input)
+        form_layout.addRow("Categoria:", self.category_input)
+        form_layout.addRow("Cantidad:", self.amount_input)
+
+        button_layout = QHBoxLayout()
+        save_button = QPushButton("Guardar")
+        button_layout.addWidget(save_button)
+
+        # self.body_layout.addLayout(self.form_widget)
+        # self.form_widget.setLayout(form_layout)
+        # self.body_layout.addWidget(self.form_widget)
+
+        # Crear un widget contenedor para el formulario y el botón
+        form_container = QWidget()
+        form_container_layout = QHBoxLayout(form_container)
+        form_container_layout.addLayout(form_layout)
+        form_container_layout.addLayout(button_layout)
+
+        # Establecer el formulario y el botón en el form_widget
+        self.form_widget.setLayout(form_container_layout)
+
+        # Agregar el formulario al QVBoxLayout del QFrame
+        self.body_layout.addWidget(self.form_widget)
 
 
 if __name__ == "__main__":

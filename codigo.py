@@ -23,7 +23,7 @@ class ReadBarcode:
         self.code = ""
         self.cell_row = ""
 
-        print("inicio de clase")
+        # print("inicio de clase")
 
     def read(self):
         try:
@@ -43,7 +43,7 @@ class ReadBarcode:
                         # Concatenar los caracteres al código de barras
                         code += event.name
 
-            print("Código leído:", code)
+            # print("Código leído:", code)
             self.code = code
             return code
 
@@ -52,7 +52,7 @@ class ReadBarcode:
 
     def search_code(self):
         try:
-            print("codigo:::", self.code)
+            # print("codigo:::", self.code)
             # barcode = self.read()
             woorkbook = read_excel_inventory(file_path)
             cell_row = search_cell_row(woorkbook, self.code, "ENTRADAS")
@@ -61,48 +61,57 @@ class ReadBarcode:
                 print("product not exists")
                 return False
 
-            print("cell_row", cell_row)
+            # print("cell_row", cell_row)
 
             dicc_products = get_all_products(woorkbook)
             print(dicc_products, type(dicc_products), len(dicc_products))
 
+            product_exist = {}
             for product in dicc_products:
                 if self.code == product["code"]:
                     input_update_product(woorkbook, cell_row)
-                    return product
+                    woorkbook.save(f"{file_path}/inventory.xlsx")
+                    product_exist = product
+
+            print(product_exist, type(product_exist))
+            if not product_exist:
+                # print("producto no existe")
+                return False
+
+            return product_exist
 
         except Exception as error:
             print(f"Error \n{error}")
 
 
-def listen_barcode(barcode):
+# def listen_barcode(barcode):
 
-    if not barcode or barcode == "":
-        return False
+#     if not barcode or barcode == "":
+#         return False
 
-    print("El código de barras escaneado es:", barcode)
-    woorkbook = read_excel_inventory(file_path)
+#     print("El código de barras escaneado es:", barcode)
+#     woorkbook = read_excel_inventory(file_path)
 
-    cell_row = search_cell_row(woorkbook, barcode, "ENTRADAS")
+#     cell_row = search_cell_row(woorkbook, barcode, "ENTRADAS")
 
-    if cell_row is False:
-        print("product not exists")
-        return False
+#     if cell_row is False:
+#         print("product not exists")
+#         return False
 
-    # dicc_products = get_all_products(woorkbook)
-    # print(dicc_products)
+#     # dicc_products = get_all_products(woorkbook)
+#     # print(dicc_products)
 
-    # input_update_product(woorkbook, cell_row)
-    # total_product = get_total_product(woorkbook, "ENTRADAS", "CODIGO")
-    # update_specific_cell
+#     # input_update_product(woorkbook, cell_row)
+#     # total_product = get_total_product(woorkbook, "ENTRADAS", "CODIGO")
+#     # update_specific_cell
 
-    test = add_product(woorkbook, "ENTRADAS", "CODIGO", barcode)
-    print("test", test)
-    # update_specific_cell(woorkbook, "ENTRADAS", "TOTAL PRODUCTO", total_product)
+#     test = add_product(woorkbook, "ENTRADAS", "CODIGO", barcode)
+#     print("test", test)
+#     # update_specific_cell(woorkbook, "ENTRADAS", "TOTAL PRODUCTO", total_product)
 
-    woorkbook.save(f"{file_path}/inventory.xlsx")
+#     woorkbook.save(f"{file_path}/inventory.xlsx")
 
-    return True
+#     return True
 
 
 # def main():

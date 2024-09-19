@@ -71,14 +71,16 @@ def input_update_product(woorkbook, cell_row, amount=False) -> bool:
         sheet = woorkbook["ENTRADAS"]
         amount_update = lambda x: int(x) if amount is not False else 1
         current_value = int(sheet[f"D{cell_row}"].value)
-        print(f"current_value: {current_value}")
+        # print(f"current_value: {current_value}, amount_update: {amount_update(amount)}")
 
-        sheet[f"D{cell_row}"].value = current_value + amount_update(amount)
-        print("actualizado", sheet["D5"].value)
+        update_value = current_value + amount_update(amount)
+
+        sheet[f"D{cell_row}"].value = update_value
+        print("actualizado", sheet[f"D{cell_row}"].value)
         return True
 
-    except:
-        print("error")
+    except Exception as error:
+        print(f"Error: {error}")
         return False
 
 

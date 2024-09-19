@@ -44,3 +44,13 @@ title_menu = """
         padding: 10px;
     }
 """
+
+
+def input_product():
+    return (
+        "background-color: white;"
+        "border: 1px solid gray;"
+        "border-radius: 4px;"
+        "padding: 5px;"
+        "color: black;"
+    )
