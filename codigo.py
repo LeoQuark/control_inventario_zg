@@ -11,11 +11,20 @@ from helpers.read_inventory import (
     output_update_product,
     get_total_product,
     update_specific_cell,
-    add_product,
+    # add_product,
     get_all_products,
 )
 
 file_path = "./data"
+rows = "ABCDE"
+
+columns = {
+    "CODIGO": "A",
+    "PRODUCTO": "B",
+    "CATEGORIA": "C",
+    "CANTIDAD": "D",
+    "FECHA": "E",
+}
 
 
 class ReadBarcode:
@@ -52,33 +61,58 @@ class ReadBarcode:
 
     def search_code(self):
         try:
-            # print("codigo:::", self.code)
-            # barcode = self.read()
-            woorkbook = read_excel_inventory(file_path)
-            cell_row = search_cell_row(woorkbook, self.code, "ENTRADAS")
+            self.woorkbook = read_excel_inventory(file_path)
+            cell_row = search_cell_row(self.woorkbook, self.code)
 
             if cell_row is False:
                 print("product not exists")
                 return False
 
-            # print("cell_row", cell_row)
-
-            dicc_products = get_all_products(woorkbook)
+            dicc_products = get_all_products(self.woorkbook)
             print(dicc_products, type(dicc_products), len(dicc_products))
 
             product_exist = {}
             for product in dicc_products:
                 if self.code == product["code"]:
-                    input_update_product(woorkbook, cell_row)
-                    woorkbook.save(f"{file_path}/inventory.xlsx")
+                    input_update_product(self.woorkbook, cell_row)
+                    self.woorkbook.save(f"{file_path}/inventory.xlsx")
                     product_exist = product
 
             print(product_exist, type(product_exist))
             if not product_exist:
-                # print("producto no existe")
                 return False
-
             return product_exist
+
+        except Exception as error:
+            print(f"Error \n{error}")
+
+    def add_product(self, columns_name, product, amount=1) -> bool:
+        try:
+
+            print("add_product function", self.code)
+            sheet = self.woorkbook["INVENTARIO"]
+
+            # for cell in sheet[columns[columns_name]]:
+            for cell in sheet[columns[columns_name]]:
+                if cell.row < 4:
+                    continue
+                if cell.value is None:
+                    date_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    # dicc_products = get_all_products(woorkbook)
+                    # product = verify_product(dicc_products, barcode)
+                    if product is False:
+                        return False
+
+                    # sheet[f"J{cell.row}"].value = product["code"]
+                    sheet[f"J{cell.row}"].value = self.code
+                    sheet[f"K{cell.row}"].value = product["name"]
+                    sheet[f"L{cell.row}"].value = product["category"]
+                    sheet[f"D{cell.row}"].value = date_now
+                    sheet[f"E{cell.row}"].value = (
+                        product["amount"] if not product["amount"] else amount
+                    )
+
+                    return True
 
         except Exception as error:
             print(f"Error \n{error}")

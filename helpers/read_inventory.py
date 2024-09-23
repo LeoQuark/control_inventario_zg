@@ -27,23 +27,22 @@ def read_excel_inventory(file_path="./data") -> xlsx:
     return woorkbook
 
 
-def search_cell_row(woorkbook, barcode, sheet_name) -> int | bool:
+def search_cell_row(woorkbook, barcode) -> int | bool:
     """
-    se buscar si existe el codigo de producto en la hoja de ingresada en la primera columna (A)
+    se buscar si existe el codigo de producto en la hoja de INVENTARIO en la primera columna (A)
     input:
         woorkbook (xlsx openpyxl) -> woorkbook del inventario (excel)
         barcode (str) -> codigo de barra
-        sheet_name (str) -> nombre de la hoja del excel a buscar
     output:
         cell.row (int) -> numero de la celda en donde se encuentra el codigo
         or
         (bool) -> en caso de que no encuentre el codigo en el inventario o error al encontrar la columna
     """
     try:
-        sheet = woorkbook[sheet_name]
+        sheet = woorkbook["INVENTARIO"]
 
         # recorro la columna A (codigo) buscando el barcode detectado
-        for cell in sheet["A"]:
+        for cell in sheet["J"]:
             if cell.row < 3:
                 continue
             if cell.value is None:
@@ -68,15 +67,15 @@ def input_update_product(woorkbook, cell_row, amount=False) -> bool:
         (bool) -> true si realiza la actualizacion de la cantidad del producto, false en caso de error
     """
     try:
-        sheet = woorkbook["ENTRADAS"]
+        sheet = woorkbook["INVENTARIO"]
         amount_update = lambda x: int(x) if amount is not False else 1
-        current_value = int(sheet[f"D{cell_row}"].value)
+        current_value = int(sheet[f"N{cell_row}"].value)
         # print(f"current_value: {current_value}, amount_update: {amount_update(amount)}")
 
         update_value = current_value + amount_update(amount)
 
-        sheet[f"D{cell_row}"].value = update_value
-        print("actualizado", sheet[f"D{cell_row}"].value)
+        sheet[f"N{cell_row}"].value = update_value
+        print("actualizado", sheet[f"N{cell_row}"].value)
         return True
 
     except Exception as error:
@@ -162,34 +161,6 @@ def verify_product(dicc_products, barcode) -> dict[any, any] | bool:
             return product
 
     return False
-
-
-def add_product(woorkbook, sheet_name, columns_name, barcode, amount=1) -> bool:
-    try:
-        sheet = woorkbook[sheet_name]
-
-        for cell in sheet[columns[columns_name]]:
-            if cell.row < 4:
-                continue
-            if cell.value is None:
-                date_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                dicc_products = get_all_products(woorkbook)
-                product = verify_product(dicc_products, barcode)
-
-                if product is False:
-                    return False
-
-                sheet[f"A{cell.row}"].value = product["code"]
-                sheet[f"B{cell.row}"].value = product["name"]
-                sheet[f"C{cell.row}"].value = product["category"]
-                sheet[f"D{cell.row}"].value = amount
-                sheet[f"E{cell.row}"].value = date_now
-
-                return True
-
-    except:
-        print("error")
-        return False
 
 
 def output_update_product(woorkbook, cell_row, amount=False) -> bool:
