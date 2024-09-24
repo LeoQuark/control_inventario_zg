@@ -34,13 +34,12 @@ class BarcodeReaderWorker(QObject):
         print("method run")
         self.read.read()
         product = self.read.search_code()
-        print(f"product {product} ", type(product))
 
         if not product:
             print("hay que hacer algo aqui")
             self.product_signal.emit({})
         else:
-            print("producot encontrado")
+            print(f"producto encontrado: {product} ")
             self.product_signal.emit(product)
 
     def add(self, product):
@@ -64,6 +63,7 @@ class Ui_MainWindow(object):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(790, 480)
         MainWindow.setFixedSize(790, 480)  # Tamaño fijo de la ventana
+        self.setWindowTitle("Control de Inventario - Zuany Group")
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
 
@@ -184,7 +184,6 @@ class Ui_MainWindow(object):
 
     def update_data_product(self, product):
         """Actualiza la interfaz con el progreso recibido del hilo."""
-        print(f"productooo: {product}")
         if not product:
             self.title_body = f"Producto Nuevo"
             self.title_label.setText(self.title_body)
@@ -192,7 +191,8 @@ class Ui_MainWindow(object):
             self.show_form_product()
 
         if product:
-            self.title_body = f"Ingreso de Productos"
+            print(product)
+            self.title_body = f"Producto Encontrado: " + product["name"]
             self.title_label.setText(self.title_body)
 
         # Detener el hilo cuando termine el trabajo
@@ -254,14 +254,15 @@ class Ui_MainWindow(object):
             "category": self.category_input.text(),
             "amount": self.amount_input.text(),
         }
+
         print(product)
 
-        print(
-            product["name"],
-            product["name"] == "",
-            product["category"] == "",
-            not product["amount"].isdigit(),
-        )
+        # print(
+        #     product["name"],
+        #     product["name"] == "",
+        #     product["category"] == "",
+        #     not product["amount"].isdigit(),
+        # )
 
         if (
             (product["name"] == "")
@@ -273,26 +274,20 @@ class Ui_MainWindow(object):
             self.show_error_message()
         else:
 
-            # Conectar la señal de éxito/fallo al método del worker
-            self.worker.add_product_signal.connect(self.handle_product_addition)
-
             # Pasar el producto al worker cuando el hilo inicie
-            self.thread.started.connect(self.worker.add(product))
+            self.thread.started.connect(lambda: self.worker.add(product))
 
+            # Conectar la señal de éxito/fallo al método del worker
+            a = self.worker.add_product_signal.connect(self.handle_product_addition)
+            print("señal: ", a)
             # Iniciar el hilo
             self.thread.start()
-
-            # self.worker.add.emit(product)
-            # # Conectar las señales
-            # self.thread.started.connect(self.worker.add)
-
-            # # Mostrar mensaje de éxito
-            # self.show_success_message()
-
             # limpiar los input
             self.name_product_input.clear()
             self.category_input.clear()
             self.amount_input.clear()
+
+            print()
 
             # Esperar 2 segundos antes de ocultar el formulario
             QTimer.singleShot(500, self.hide_form)
@@ -306,6 +301,8 @@ class Ui_MainWindow(object):
             self.name_product_input.clear()
             self.category_input.clear()
             self.amount_input.clear()
+
+            print("ingresadoooo")
             # Ocultar el formulario después de 2 segundos
             QTimer.singleShot(2000, self.hide_form)
         else:

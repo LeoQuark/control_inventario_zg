@@ -49,7 +49,7 @@ def search_cell_row(woorkbook, barcode) -> int | bool:
                 return False
 
             if cell.value == barcode:
-                print(f"barcode in cell row: {cell.row}")
+                # print(f"barcode in cell row: {cell.row}")
                 return cell.row
     except:
         print("error")
@@ -120,9 +120,9 @@ def update_specific_cell(woorkbook, sheet_name, columns_name, value) -> bool:
 # usado
 def get_all_products(woorkbook) -> dict[any, any] | bool:
     try:
-        sheet = woorkbook["ENTRADAS"]
+        sheet = woorkbook["INVENTARIO"]
         list_code = []
-        for cell in sheet["A"]:
+        for cell in sheet["J"]:
             if cell.row < 4:
                 continue
             if cell.value is None:
@@ -133,7 +133,7 @@ def get_all_products(woorkbook) -> dict[any, any] | bool:
         unique_product = df_product["codigos"].unique()
 
         dicc_products = []
-        for cell in sheet["A"]:
+        for cell in sheet["J"]:
             if cell.row < 4:
                 continue
             if cell.value is None:
@@ -142,8 +142,8 @@ def get_all_products(woorkbook) -> dict[any, any] | bool:
                 dicc_products.append(
                     {
                         "code": cell.value,
-                        "name": sheet[f"B{cell.row}"].value,
-                        "category": sheet[f"C{cell.row}"].value,
+                        "name": sheet[f"K{cell.row}"].value,
+                        "category": sheet[f"L{cell.row}"].value,
                     }
                 )
 

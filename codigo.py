@@ -3,6 +3,7 @@ import pandas as pd
 import datetime
 import uuid as uid
 
+from datetime import datetime
 from helpers.read_code import read_barcode
 from helpers.read_inventory import (
     read_excel_inventory,
@@ -69,7 +70,6 @@ class ReadBarcode:
                 return False
 
             dicc_products = get_all_products(self.woorkbook)
-            print(dicc_products, type(dicc_products), len(dicc_products))
 
             product_exist = {}
             for product in dicc_products:
@@ -78,7 +78,7 @@ class ReadBarcode:
                     self.woorkbook.save(f"{file_path}/inventory.xlsx")
                     product_exist = product
 
-            print(product_exist, type(product_exist))
+            # print(product_exist, type(product_exist))
             if not product_exist:
                 return False
             return product_exist
