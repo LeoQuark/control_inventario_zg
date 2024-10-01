@@ -19,46 +19,27 @@ from codigo import ReadBarcode
 
 class BarcodeReaderWorker(QObject):
     # Definir una señal para enviar datos al hilo principal
-    # barcode_signal = pyqtSignal(str)
     product_signal = pyqtSignal(dict)
-
     add_product_signal = pyqtSignal(bool)
-    # product_input_signal = pyqtSignal(dict)
 
-    def __init__(self):
+    def __init__(self, readBarcode):
         super().__init__()
-        # Crear una instancia de la clase ReadBarcode
-        self.read = ReadBarcode()
+        self.readBarcodeInstance = readBarcode
+        self.barcode = ""
 
     def run(self):
-        print("method run")
-        self.read.read()
-        product = self.read.search_code()
+        self.barcode = self.readBarcodeInstance.read()
+        product = self.readBarcodeInstance.search_code()
 
         if not product:
-            print("hay que hacer algo aqui")
             self.product_signal.emit({})
         else:
-            print(f"producto encontrado: {product} ")
             self.product_signal.emit(product)
-
-    def add(self, product):
-        print("agregando producto")
-        print(product)
-        was_added = self.read.add_product("CODIGO", product)
-
-        if not was_added:
-            self.add_product_signal.emit(False)
-        else:
-            self.add_product_signal.emit(True)
 
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
-        # self.read_barcode = ReadBarcode()
-
         self.title_body = ""
-
         # Configuración de la ventana principal
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(790, 480)
@@ -66,7 +47,6 @@ class Ui_MainWindow(object):
         self.setWindowTitle("Control de Inventario - Zuany Group")
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
-
         # Crear el QGridLayout principal
         self.grid_layout = QGridLayout(self.centralwidget)
         self.grid_layout.setContentsMargins(10, 10, 10, 10)  # Márgenes opcionales
@@ -97,7 +77,8 @@ class Ui_MainWindow(object):
         self.btn_ingresar.setFixedHeight(button_height)
         self.btn_salida.setFixedHeight(button_height)
 
-        self.btn_ingresar.clicked.connect(self.add_product)
+        self.btn_ingresar.clicked.connect(self.add_product_btn)
+        self.btn_salida.clicked.connect(self.remove_product_btn)
 
         self.menu_layout.addWidget(self.btn_ingresar)
         self.menu_layout.addWidget(self.btn_salida)
@@ -154,9 +135,10 @@ class Ui_MainWindow(object):
                 return  # Evitar iniciar múltiples hilos simultáneamente
 
             print("Creando worker")
+            self.readBarcodeInstance = ReadBarcode()
             # Crear el hilo y el worker
             self.thread = QThread()
-            self.worker = BarcodeReaderWorker()
+            self.worker = BarcodeReaderWorker(self.readBarcodeInstance)
             # Mover el worker al hilo
             self.worker.moveToThread(self.thread)
         except Exception as error:
@@ -170,7 +152,7 @@ class Ui_MainWindow(object):
         except Exception as error:
             print(f"Error \n {error}")
 
-    def add_product(self):
+    def add_product_btn(self):
         try:
             self.create_worker()
             self.worker.product_signal.connect(self.update_data_product)
@@ -196,7 +178,7 @@ class Ui_MainWindow(object):
             self.title_label.setText(self.title_body)
 
         # Detener el hilo cuando termine el trabajo
-        self.finish_worker()
+        # self.finish_worker()
 
     def show_form_product(self):
         """Genera y muestra un formulario de ingreso de datos"""
@@ -230,20 +212,11 @@ class Ui_MainWindow(object):
 
         # Establecer el formulario y el botón en el form_widget
         self.form_widget.setLayout(form_container_layout)
-
         # Agregar el formulario al QVBoxLayout del QFrame
         self.body_layout.addWidget(self.form_widget)
-        # save_button.clicked.connect(self.get_product_input)
-
-        # self.create_worker()
-        # # Iniciar el hilo
-        # self.thread.start()
-        # Conectar las señales
-        # self.thread.started.connect(self.worker.add)
 
         print("esta haciendo algo")
         save_button.clicked.connect(self.get_product_input)
-        self.create_worker()
 
         # self.worker.add_product_signal.connect(self.get_product_input)
 
@@ -254,43 +227,60 @@ class Ui_MainWindow(object):
             "category": self.category_input.text(),
             "amount": self.amount_input.text(),
         }
-
         print(product)
-
-        # print(
-        #     product["name"],
-        #     product["name"] == "",
-        #     product["category"] == "",
-        #     not product["amount"].isdigit(),
-        # )
-
         if (
             (product["name"] == "")
             or (product["category"] == "")
             or (not product["amount"].isdigit())
         ):
             print("Error al ingresar el producto")
-            # Mostrar mensaje de error
             self.show_error_message()
         else:
+            was_added = self.readBarcodeInstance.add_product(
+                "CODIGO", product, product["amount"]
+            )
+            if was_added:
+                print("producto agregado")
+                # Esperar 2 segundos antes de ocultar el formulario
+                QTimer.singleShot(500, self.hide_form)
+            else:
+                print("error al guardar el producto")
 
-            # Pasar el producto al worker cuando el hilo inicie
-            self.thread.started.connect(lambda: self.worker.add(product))
-
-            # Conectar la señal de éxito/fallo al método del worker
-            a = self.worker.add_product_signal.connect(self.handle_product_addition)
-            print("señal: ", a)
-            # Iniciar el hilo
-            self.thread.start()
-            # limpiar los input
+            # Limpiar los inputs
             self.name_product_input.clear()
             self.category_input.clear()
             self.amount_input.clear()
+            self.finish_worker()
 
-            print()
+    def remove_product_btn(self):
+        try:
+            print("quitar producto")
 
-            # Esperar 2 segundos antes de ocultar el formulario
-            QTimer.singleShot(500, self.hide_form)
+            self.create_worker()
+            self.worker.product_signal.connect(self.product_removed)
+
+            # Conectar las señales
+            self.thread.started.connect(self.worker.run)
+            # Iniciar el hilo
+            self.thread.start()
+
+        except Exception as error:
+            print(f"Error \n {error}")
+
+    def product_removed(self, product):
+        try:
+            print("producto remmovido", product)
+
+            was_removed = self.readBarcodeInstance.remove_product(product)
+
+            if was_removed:
+                self.title_body = f"Producto removido"
+                self.title_label.setText(self.title_body)
+            else:
+                print("::::(())")
+
+        except Exception as error:
+            print(f"Error \n {error}")
 
     def handle_product_addition(self, success):
         """Maneja la respuesta del worker sobre si el producto fue añadido"""

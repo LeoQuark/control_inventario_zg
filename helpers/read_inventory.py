@@ -1,17 +1,14 @@
 import pandas as pd
 import openpyxl as xlsx
 from datetime import datetime
-
-rows = "ABCDE"
+from typing import Dict
 
 columns = {
-    "CODIGO": "A",
-    "PRODUCTO": "B",
-    "CATEGORIA": "C",
-    "CANTIDAD": "D",
-    "FECHA": "E",
-    "TOTAL PRODUCTO": "H1",
-    "TOTAL ENTRADAS": "H2",
+    "CODIGO": ["J", "R"],
+    "PRODUCTO": ["K", "S"],
+    "CATEGORIA": ["L", "T"],
+    "FECHA": ["M", "U"],
+    "CANTIDAD": ["N", "V"],
 }
 
 
@@ -84,7 +81,6 @@ def input_update_product(woorkbook, cell_row, amount=False) -> bool:
 
 
 def get_total_product(woorkbook, sheet_name, columns_name) -> int:
-    print("sasa")
     try:
         sheet = woorkbook[sheet_name]
         # recorro la columna A (codigo) buscando el barcode detectado
@@ -106,10 +102,28 @@ def get_total_product(woorkbook, sheet_name, columns_name) -> int:
         return False
 
 
-def update_specific_cell(woorkbook, sheet_name, columns_name, value) -> bool:
+def write_specific_cell(sheet, type: int, product: Dict, date_now: datetime) -> bool:
     try:
-        sheet = woorkbook[sheet_name]
-        sheet[columns[columns_name]].value = value
+
+        print(sheet)
+
+        type_sheet = "R" if type == 1 else "J"
+
+        print(type_sheet)
+        cell_row = len(sheet[f"{type_sheet}"]) + 1
+        print(sheet[f"{type_sheet}"])
+        print(cell_row)
+
+        # cell_row = next_cell_row
+
+        sheet[f"{columns['CODIGO'][type]}{cell_row}"].value = product["code"]
+        sheet[f"{columns['PRODUCTO'][type]}{cell_row}"].value = product["name"]
+        sheet[f"{columns['CATEGORIA'][type]}{cell_row}"].value = product["category"]
+        sheet[f"{columns['FECHA'][type]}{cell_row}"].value = date_now
+        sheet[f"{columns['CANTIDAD'][type]}{cell_row}"].value = (
+            int(product["amount"]) - 1 if type == 1 else product["amount"]
+        )
+
         return True
 
     except:
@@ -141,9 +155,11 @@ def get_all_products(woorkbook) -> dict[any, any] | bool:
             if cell.value in unique_product:
                 dicc_products.append(
                     {
+                        "cell_row": cell.row,
                         "code": cell.value,
                         "name": sheet[f"K{cell.row}"].value,
                         "category": sheet[f"L{cell.row}"].value,
+                        "amount": sheet[f"N{cell.row}"].value,
                     }
                 )
 
