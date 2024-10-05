@@ -93,13 +93,11 @@ class Ui_MainWindow(object):
         self.body_frame.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
         self.body_frame.setFrameShadow(QtWidgets.QFrame.Shadow.Raised)
         self.body_layout = QtWidgets.QVBoxLayout(self.body_frame)
-
         # Título del cuerpo
         self.title_label = QtWidgets.QLabel(self.title_body, self.body_frame)
         self.title_label.setFixedSize(500, 60)
         self.title_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.title_label.setStyleSheet("font-size: 18px; font-weight: bold;")
-
         # Formulario del cuerpo
         self.form_widget = QWidget()
         self.body_layout.addWidget(self.title_label)
@@ -108,14 +106,10 @@ class Ui_MainWindow(object):
         self.grid_layout.addWidget(
             self.body_frame, 0, 1, 2, 2
         )  # Ocupa 2 filas, 2 columnas
-
         # Configurar la ventana principal
         MainWindow.setCentralWidget(self.centralwidget)
 
     def generate_body_add_product(self):
-        # self.title_body = "Ingreso de Productos"
-        # self.title_label.setText(self.title_body)
-
         self.form_layout = QtWidgets.QFormLayout()
         self.product_name = QtWidgets.QLineEdit()
         self.product_code = QtWidgets.QLineEdit()
@@ -166,19 +160,25 @@ class Ui_MainWindow(object):
 
     def update_data_product(self, product):
         """Actualiza la interfaz con el progreso recibido del hilo."""
-        if not product:
-            self.title_body = f"Producto Nuevo"
-            self.title_label.setText(self.title_body)
-            # muestra el formulario de ingreso de productos
-            self.show_form_product()
+        try:
+            if not product:
+                self.title_body = f"Producto Nuevo"
+                self.title_label.setText(self.title_body)
+                # muestra el formulario de ingreso de productos
+                self.show_form_product()
 
-        if product:
-            print(product)
-            self.title_body = f"Producto Encontrado: " + product["name"]
-            self.title_label.setText(self.title_body)
+            if product:
+                print(product)
+                self.title_body = f"Producto Encontrado: " + product["name"]
+                self.title_label.setText(self.title_body)
 
-        # Detener el hilo cuando termine el trabajo
-        # self.finish_worker()
+                was_added = self.readBarcodeInstance.update_amount_product("add")
+                if was_added:
+                    print("producto actualizado")
+                    self.finish_worker()
+
+        except Exception as error:
+            print(f"error:\n{error}")
 
     def show_form_product(self):
         """Genera y muestra un formulario de ingreso de datos"""
@@ -194,7 +194,6 @@ class Ui_MainWindow(object):
         self.name_product_input.setStyleSheet(style_input)
         self.category_input.setStyleSheet(style_input)
         self.amount_input.setStyleSheet(style_input)
-
         form_layout.addRow("Producto:", self.name_product_input)
         form_layout.addRow("Categoria:", self.category_input)
         form_layout.addRow("Cantidad:", self.amount_input)
@@ -203,7 +202,6 @@ class Ui_MainWindow(object):
         button_layout = QHBoxLayout()
         save_button = QPushButton("Guardar")
         button_layout.addWidget(save_button)
-
         # Crear un widget contenedor para el formulario y el botón
         form_container = QWidget()
         form_container_layout = QHBoxLayout(form_container)
@@ -214,11 +212,7 @@ class Ui_MainWindow(object):
         self.form_widget.setLayout(form_container_layout)
         # Agregar el formulario al QVBoxLayout del QFrame
         self.body_layout.addWidget(self.form_widget)
-
-        print("esta haciendo algo")
         save_button.clicked.connect(self.get_product_input)
-
-        # self.worker.add_product_signal.connect(self.get_product_input)
 
     def get_product_input(self):
 
@@ -236,9 +230,11 @@ class Ui_MainWindow(object):
             print("Error al ingresar el producto")
             self.show_error_message()
         else:
-            was_added = self.readBarcodeInstance.add_product(
-                "CODIGO", product, product["amount"]
-            )
+            # was_added = self.readBarcodeInstance.add_product(
+            #     "CODIGO", product["amount"]
+            # )
+
+            was_added = self.readBarcodeInstance.write_specific_cell(0)
             if was_added:
                 print("producto agregado")
                 # Esperar 2 segundos antes de ocultar el formulario
@@ -254,11 +250,8 @@ class Ui_MainWindow(object):
 
     def remove_product_btn(self):
         try:
-            print("quitar producto")
-
             self.create_worker()
             self.worker.product_signal.connect(self.product_removed)
-
             # Conectar las señales
             self.thread.started.connect(self.worker.run)
             # Iniciar el hilo
@@ -269,9 +262,9 @@ class Ui_MainWindow(object):
 
     def product_removed(self, product):
         try:
-            print("producto remmovido", product)
+            print("producto a remover", product)
 
-            was_removed = self.readBarcodeInstance.remove_product(product)
+            was_removed = self.readBarcodeInstance.remove_product()
 
             if was_removed:
                 self.title_body = f"Producto removido"
