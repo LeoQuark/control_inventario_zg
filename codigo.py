@@ -18,14 +18,25 @@ from helpers.read_inventory import (
 )
 
 file_path = "./data"
-rows = "ABCDE"
 
-columns = {
-    "CODIGO": ["J", "R"],
-    "PRODUCTO": ["K", "S"],
-    "CATEGORIA": ["L", "T"],
-    "FECHA": ["M", "U"],
-    "CANTIDAD": ["N", "V"],
+# columnas para inventario general
+columns_inventario_general = {
+    "CODIGO": ["A"],
+    "PRODUCTO": ["B"],
+    "CATEGORIA": ["C"],
+    "STOCK": ["D"],
+    "UNIDAD": ["E"],
+    "UMBRAL": ["F"],
+}
+
+# columnas para inventario [entrada, salida]
+columns_inventario = {
+    "CODIGO": ["B", "K"],
+    "PRODUCTO": ["C", "L"],
+    "CATEGORIA": ["D", "M"],
+    "FECHA": ["E", "N"],
+    "CANTIDAD": ["F", "O"],
+    "MEDIDA": ["G", "P"],
 }
 
 
@@ -40,17 +51,13 @@ class ReadBarcode:
         try:
             code = ""
             while True:
-                # Leer el evento del teclado
                 event = keyboard.read_event()
-                # Asegúrate de que el evento no es None
                 if event is None:
                     continue
                 if event.event_type == keyboard.KEY_DOWN:
                     if event.name == "enter":
-                        # Si se presiona "enter", termina la lectura
                         break
                     else:
-                        # Concatenar los caracteres al código de barras
                         code += event.name
 
             self.code = code
@@ -61,9 +68,9 @@ class ReadBarcode:
 
     def get_all_products(self) -> dict[any, any] | bool:
         try:
-            sheet = self.woorkbook["INVENTARIO"]
+            sheet = self.woorkbook["INVENTARIO GENERAL"]
             list_code = []
-            for cell in sheet["J"]:
+            for cell in sheet["A"]:
                 if cell.row < 4:
                     continue
                 if cell.value is None:
@@ -74,7 +81,7 @@ class ReadBarcode:
             unique_product = df_product["codigos"].unique()
 
             dicc_products = []
-            for cell in sheet["J"]:
+            for cell in sheet["A"]:
                 if cell.row < 4:
                     continue
                 if cell.value is None:
@@ -84,9 +91,10 @@ class ReadBarcode:
                         {
                             "cell_row": cell.row,
                             "code": cell.value,
-                            "name": sheet[f"K{cell.row}"].value,
-                            "category": sheet[f"L{cell.row}"].value,
-                            "amount": sheet[f"N{cell.row}"].value,
+                            "name": sheet[f"B{cell.row}"].value,
+                            "category": sheet[f"C{cell.row}"].value,
+                            "stock": sheet[f"D{cell.row}"].value,
+                            "umbral": sheet[f"E{cell.row}"].value,
                         }
                     )
 
@@ -105,6 +113,7 @@ class ReadBarcode:
                 return False
 
             dicc_products = self.get_all_products()
+            print("dicc_products:", dicc_products)
             product_exist = {}
 
             for product in dicc_products:
@@ -119,50 +128,62 @@ class ReadBarcode:
         except Exception as error:
             print(f"Error \n{error}")
 
-    def write_specific_cell(self, type: int):
+    def write_specific_cell(self, sheet: str, type: int, product: Dict):
         """
         escribe en una celda especifica del excel
         input:
-            type (int): 0 para escribir en entrada y 1 para salida
+            type (int): entrada o salida
         """
         try:
+            print("product:", product)
+            print("type:", type)
+            excel_sheet = self.woorkbook[sheet]
+            print(excel_sheet)
 
-            sheet = self.woorkbook["INVENTARIO"]
-            # R columnas para salidas y J columna para entradas
-            type_sheet = "J" if type == 0 else "R"
-            print("type", type_sheet)
-            next_cell_row = len(sheet[type_sheet]) + 1
-            print("next_cell_row", next_cell_row)
-            cell_row = self.product["cell_row"]
-            print("cell_row", cell_row)
+            if sheet == "INVENTARIO GENERAL":
+                next_cell_row = len(excel_sheet["A"]) + 1
+                print("next_cell_row:", next_cell_row, type(next_cell_row))
+                print(next_cell_row)
 
-            current_amount = self.product["amount"]
+                print(sheet[f"A{next_cell_row}"].value)
 
-            # cell_row = next_cell_row
-            print(f"columna: {columns['CODIGO'][type]}{cell_row}")
+                sheet[f"A{next_cell_row}"].value = self.code
+                sheet[f"B{next_cell_row}"].value = product["name"]
+                sheet[f"C{next_cell_row}"].value = product["category"]
+                sheet[f"D{next_cell_row}"].value = product["amount"]
+                sheet[f"E{next_cell_row}"].value = product["unit"]
 
-            sheet[f"J{next_cell_row}"].value = self.code
-            sheet[f"K{next_cell_row}"].value = self.product["name"]
-            sheet[f"L{next_cell_row}"].value = self.product["category"]
-            sheet[f"M{next_cell_row}"].value = self.date_now
-            sheet[f"N{next_cell_row}"].value = (
-                self.product["amount"] if not self.product["amount"] else amount
-            )
+            else:
+                # type es entrada la columna a verificar es B si es salida es K
+                type_sheet = 0 if type == "ENTRADA" else 1
+                next_cell_row = (
+                    len(excel_sheet[columns_inventario["CODIGO"][type_sheet]]) + 1
+                )
 
-            # sheet[f"{columns['CODIGO'][type]}{cell_row}"].value = self.product["code"]
-            # sheet[f"{columns['PRODUCTO'][type]}{cell_row}"].value = self.product["name"]
-            # sheet[f"{columns['CATEGORIA'][type]}{cell_row}"].value = self.product[
-            #     "category"
-            # ]
-            # sheet[f"{columns['FECHA'][type]}{cell_row}"].value = self.date_now
-            # sheet[f"{columns['CANTIDAD'][type]}{cell_row}"].value = (
-            #     int(self.product["amount"]) - 1 if type == 1 else self.product["amount"]
-            # )
+                sheet[
+                    f"{columns_inventario.CODIGO[type_sheet]}{next_cell_row}"
+                ].value = self.code
+                sheet[
+                    f"{columns_inventario.PRODUCTO[type_sheet]}{next_cell_row}"
+                ].value = product["name"]
+                sheet[
+                    f"{columns_inventario.CATEGORIA[type_sheet]}{next_cell_row}"
+                ].value = product["category"]
+                sheet[
+                    f"{columns_inventario.FECHA[type_sheet]}{next_cell_row}"
+                ].value = self.date_now
+                sheet[
+                    f"{columns_inventario.CANTIDAD[type_sheet]}{next_cell_row}"
+                ].value = product["amount"]
+                sheet[
+                    f"{columns_inventario.MEDIDA[type_sheet]}{next_cell_row}"
+                ].value = product["unit"]
 
+            self.woorkbook.save(f"{file_path}/inventory.xlsx")
             return True
 
-        except:
-            print("error")
+        except Exception as error:
+            print(f"Error: {error}")
             return False
 
     def update_amount_product(self, operation: str = "add"):

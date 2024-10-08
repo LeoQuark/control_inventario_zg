@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QLabel,
     QMessageBox,
+    QComboBox,
 )
 from styles import frame_menu, btn_ingreso, title_menu, input_product
 from codigo import ReadBarcode
@@ -148,6 +149,9 @@ class Ui_MainWindow(object):
 
     def add_product_btn(self):
         try:
+            self.title_body = f"Lectura de Productos"
+            self.title_label.setText(self.title_body)
+
             self.create_worker()
             self.worker.product_signal.connect(self.update_data_product)
             # Conectar las señales
@@ -172,10 +176,48 @@ class Ui_MainWindow(object):
                 self.title_body = f"Producto Encontrado: " + product["name"]
                 self.title_label.setText(self.title_body)
 
+                self.show_form_product()
+
                 was_added = self.readBarcodeInstance.update_amount_product("add")
                 if was_added:
                     print("producto actualizado")
                     self.finish_worker()
+
+        except Exception as error:
+            print(f"error:\n{error}")
+
+    def show_form_amount(self, type: str = "add"):
+        """Formulario para ingresar cantidad de producto agregado y/o eliminado"""
+        try:
+            # print()
+            form_layout = QFormLayout()
+            # Crear campos de formulario
+            self.amount_input = QLineEdit()
+            # Aplicar estilos CSS a los QLineEdit
+            style_input = input_product()
+            self.amount_input.setStyleSheet(style_input)
+            # boton para guardar
+            button_layout = QHBoxLayout()
+            save_button = QPushButton("Guardar")
+            button_layout.addWidget(save_button)
+            # Crear un widget contenedor para el formulario y el botón
+            form_container = QWidget()
+            form_container_layout = QHBoxLayout(form_container)
+            form_container_layout.addLayout(form_layout)
+            form_container_layout.addLayout(button_layout)
+            # Establecer el formulario y el botón en el form_widget
+            self.form_widget.setLayout(form_container_layout)
+            save_button.clicked.connect(self.show_form_entry_product)
+
+        except Exception as error:
+            print(f"error:\n{error}")
+
+    def add_amount_product(self):
+        """Agregar cantidad al excel"""
+        try:
+            amount = self.amount_input.text()
+            print("amount:", amount)
+            # was_added = self.readBarcodeInstance.write_specific_cell(0)
 
         except Exception as error:
             print(f"error:\n{error}")
@@ -188,15 +230,21 @@ class Ui_MainWindow(object):
         self.name_product_input = QLineEdit()
         self.category_input = QLineEdit()
         self.amount_input = QLineEdit()
+        self.unit_input = QComboBox()
+        self.unit_input.addItem("Unidad")
+        self.unit_input.addItem("L")
+        self.unit_input.addItem("Kg")
 
         # Aplicar estilos CSS a los QLineEdit
         style_input = input_product()
         self.name_product_input.setStyleSheet(style_input)
         self.category_input.setStyleSheet(style_input)
         self.amount_input.setStyleSheet(style_input)
+        self.unit_input.setStyleSheet(style_input)
         form_layout.addRow("Producto:", self.name_product_input)
         form_layout.addRow("Categoria:", self.category_input)
         form_layout.addRow("Cantidad:", self.amount_input)
+        form_layout.addRow("Unidad de Medida:", self.unit_input)
 
         # boton para guardar
         button_layout = QHBoxLayout()
@@ -212,20 +260,21 @@ class Ui_MainWindow(object):
         self.form_widget.setLayout(form_container_layout)
         # Agregar el formulario al QVBoxLayout del QFrame
         self.body_layout.addWidget(self.form_widget)
-        save_button.clicked.connect(self.get_product_input)
+        save_button.clicked.connect(self.show_form_entry_product)
 
-    def get_product_input(self):
-
+    def show_form_entry_product(self):
         product = {
             "name": self.name_product_input.text(),
             "category": self.category_input.text(),
             "amount": self.amount_input.text(),
+            "unit": self.unit_input.currentText(),
         }
-        print(product)
+        # print(product)
         if (
             (product["name"] == "")
             or (product["category"] == "")
             or (not product["amount"].isdigit())
+            or (product["unit"] == "")
         ):
             print("Error al ingresar el producto")
             self.show_error_message()
@@ -234,8 +283,14 @@ class Ui_MainWindow(object):
             #     "CODIGO", product["amount"]
             # )
 
-            was_added = self.readBarcodeInstance.write_specific_cell(0)
-            if was_added:
+            was_added_inventory_general = self.readBarcodeInstance.write_specific_cell(
+                "INVENTARIO GENERAL", "", product
+            )
+            was_added_inventory = self.readBarcodeInstance.write_specific_cell(
+                "INVENTARIO", "ENTRADA", product
+            )
+
+            if was_added_inventory_general and was_added_inventory:
                 print("producto agregado")
                 # Esperar 2 segundos antes de ocultar el formulario
                 QTimer.singleShot(500, self.hide_form)
@@ -246,6 +301,7 @@ class Ui_MainWindow(object):
             self.name_product_input.clear()
             self.category_input.clear()
             self.amount_input.clear()
+            self.unit_input.clear()
             self.finish_worker()
 
     def remove_product_btn(self):
